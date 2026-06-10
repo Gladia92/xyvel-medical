@@ -22,9 +22,7 @@ export default function App() {
   return (
     <div>
       <div className="brand">
-        <span className="brand-logo">
-          <i className="ti ti-plus" />
-        </span>
+        <img className="brand-logo" src="./logo.png" alt="XYVEL Medical" />
         <span className="brand-name">XYVEL Medical</span>
       </div>
 
