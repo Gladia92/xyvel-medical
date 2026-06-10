@@ -3,18 +3,131 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#7c3aed" />
     <title>XYVEL Medical</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      :root {
+        --brand: #7c3aed;
+        --brand-soft: #f3eafe;
+        --bg: #fafafa;
+        --card: #ffffff;
+        --border: #e8e8ec;
+        --text: #18181b;
+        --muted: #71717a;
+      }
+
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: #fafafa;
-        color: #1a1a1a;
+        background: var(--bg);
+        color: var(--text);
         min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
       }
-      #root { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+      #root { max-width: 1100px; margin: 0 auto; padding: 40px 24px 64px; }
+
       a { text-decoration: none; color: inherit; }
+
+      /* Header de marque */
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 14px 6px 6px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 0.5px solid var(--border);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      }
+      .brand-logo {
+        width: 30px; height: 30px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        color: #fff;
+        display: grid; place-items: center;
+        font-size: 16px;
+      }
+      .brand-name { font-weight: 700; font-size: 15px; letter-spacing: -0.2px; }
+
+      h1 { font-size: 30px; font-weight: 750; letter-spacing: -0.6px; margin-top: 22px; }
+      .tagline { color: var(--muted); margin-top: 8px; font-size: 15px; }
+
+      /* Barre de recherche */
+      .search {
+        display: flex; align-items: center; gap: 10px;
+        margin: 28px 0 20px;
+        padding: 11px 16px;
+        background: var(--card);
+        border: 0.5px solid var(--border);
+        border-radius: 12px;
+        max-width: 420px;
+      }
+      .search i { color: var(--muted); font-size: 18px; }
+      .search input {
+        border: 0; outline: 0; background: transparent;
+        font: inherit; color: inherit; width: 100%;
+      }
+
+      .section-label {
+        font-size: 12px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.6px; color: var(--muted);
+        margin: 24px 0 12px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 14px;
+      }
+
+      .card {
+        display: flex; flex-direction: column;
+        padding: 20px;
+        background: var(--card);
+        border: 0.5px solid var(--border);
+        border-radius: 16px;
+        transition: box-shadow .15s, transform .15s, border-color .15s;
+        position: relative;
+      }
+      .card.available { cursor: pointer; }
+      .card.available:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+        border-color: #dcdce2;
+      }
+      .card.soon { opacity: 0.72; }
+
+      .card-icon {
+        width: 46px; height: 46px;
+        border-radius: 13px;
+        display: grid; place-items: center;
+        font-size: 24px; margin-bottom: 14px;
+      }
+      .card-name { font-weight: 650; font-size: 16px; }
+      .card-desc { color: var(--muted); font-size: 13px; margin-top: 5px; line-height: 1.45; }
+
+      .badge {
+        position: absolute; top: 16px; right: 16px;
+        font-size: 11px; font-weight: 600;
+        padding: 3px 9px; border-radius: 999px;
+      }
+      .badge.soon { background: #f4f4f5; color: #71717a; }
+      .card-cta {
+        margin-top: 14px; font-size: 13px; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 5px;
+      }
+
+      .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+
+      footer {
+        margin-top: 48px; padding-top: 20px;
+        border-top: 0.5px solid var(--border);
+        color: var(--muted); font-size: 13px;
+        display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+      }
     </style>
   </head>
   <body>
