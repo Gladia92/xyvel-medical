@@ -4,17 +4,58 @@
   "description": "XYVEL Medical — hub qui regroupe les applications médicales XYVEL",
   "author": "XYVEL",
   "private": true,
+  "main": "electron.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5174 && electron .\"",
+    "electron:build": "vite build && electron-builder --publish never",
+    "make": "npm run electron:build",
+    "cap:sync": "npm run build && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor/android": "^7.6.6",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/browser": "^7.0.5",
+    "@capacitor/cli": "^7.6.6",
+    "@capacitor/core": "^7.6.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
-    "vite": "^5.0.0"
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3",
+    "electron": "^28.0.0",
+    "electron-builder": "^25.1.8",
+    "vite": "^5.0.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.xyvel.medical",
+    "productName": "XYVEL Medical",
+    "directories": {
+      "output": "out"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "include": "installer.nsh"
+    },
+    "extraResources": [
+      "xyvel-medical.cer"
+    ],
+    "files": [
+      "dist/**/*",
+      "electron.js",
+      "preload.js"
+    ]
   }
 }

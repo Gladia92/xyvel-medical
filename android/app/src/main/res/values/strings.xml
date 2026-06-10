@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">XYVEL Medical</string>
+    <string name="title_activity_main">XYVEL Medical</string>
+    <string name="package_name">com.xyvel.medical</string>
+    <string name="custom_url_scheme">com.xyvel.medical</string>
+</resources>

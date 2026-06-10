@@ -1,6 +1,32 @@
+# Dépendances / build
 node_modules/
 dist/
 out/
 .vite/
+vite.config.js.timestamp-*
+
+# Android (généré / build)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/captures/
+android/keystore.properties
+
+# Clé privée de signature Windows — NE JAMAIS committer (le .cer public, lui, est suivi)
+*.pfx
+*base64*
+
+# Clé de signature Android release — NE JAMAIS committer
+*.keystore
+*.jks
+keystore.properties
+
+# Récap des secrets (mots de passe) — NE JAMAIS committer
+SIGNING-SECRETS.txt
+
+# Divers
 .DS_Store
 *.local
+*.log
