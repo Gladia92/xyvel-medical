@@ -37,9 +37,10 @@ export const apps = [
     launch: {
       winDisplayName: "SuiviMed",
       winExe: "SuiviMed.exe",
+      releasesRepo: "Gladia92/suivimed",
       androidPackage: "com.xyvel.suivimed",
     },
-    url: "",
+    url: "https://gladia92.github.io/suivimed/",
   },
   {
     id: "tension-log",
