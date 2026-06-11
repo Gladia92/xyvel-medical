@@ -76,7 +76,7 @@ foreach ($r in $roots) {
       $exe = $null
       if ($p.DisplayIcon) { $exe = ($p.DisplayIcon -split ',')[0].Trim('"') }
       if ((-not $exe) -and $p.InstallLocation) { $exe = Join-Path $p.InstallLocation $exeName }
-      if ($exe -and (Test-Path $exe)) { Write-Output $exe }
+      if ($exe -and (Test-Path $exe)) { Write-Output "$exe|||$($p.DisplayVersion)" }
     }
   }
 }`;
@@ -85,15 +85,33 @@ foreach ($r in $roots) {
       ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", ps],
       { windowsHide: true, timeout: 15000 },
       (err, stdout) => {
-        const exe = String(stdout || "")
+        const line = String(stdout || "")
           .split(/\r?\n/)
           .map((s) => s.trim())
           .filter(Boolean)[0];
-        if (!exe) return resolve(null);
-        resolve(fs.existsSync(exe) ? exe : null);
+        if (!line) return resolve(null);
+        const [exe, version] = line.split("|||");
+        if (!exe || !fs.existsSync(exe)) return resolve(null);
+        resolve({ exe, version: (version || "").trim() });
       }
     );
   });
+}
+
+// Compare deux numéros de version "x.y.z" (ignore un préfixe "v").
+// Retourne > 0 si a > b, < 0 si a < b, 0 si égales.
+function normalizeVersion(v) {
+  return String(v || "").trim().replace(/^v/i, "");
+}
+
+function compareVersions(a, b) {
+  const pa = normalizeVersion(a).split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = normalizeVersion(b).split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
 }
 
 function launchExe(exe) {
@@ -149,18 +167,30 @@ function download(url, dest, onProgress) {
   });
 }
 
-// État : l'app est-elle installée ?
+// État : l'app est-elle installée ? Si oui, une mise à jour est-elle disponible ?
 ipcMain.handle("app-status", async (_e, launch) => {
   if (process.platform !== "win32") return { supported: false, installed: false };
-  const exe = await findInstalledExe(launch);
-  return { supported: true, installed: !!exe };
+  const info = await findInstalledExe(launch);
+  if (!info) return { supported: true, installed: false };
+
+  const result = { supported: true, installed: true, version: info.version, updateAvailable: false };
+  if (launch.releasesRepo) {
+    try {
+      const rel = await getJSON(`https://api.github.com/repos/${launch.releasesRepo}/releases/latest`);
+      result.latestVersion = normalizeVersion(rel.tag_name);
+      result.updateAvailable = compareVersions(result.latestVersion, info.version) > 0;
+    } catch (e) {
+      // Pas de réseau / API indisponible -> on ignore, pas de mise à jour signalée.
+    }
+  }
+  return result;
 });
 
 // Lancer l'app installée.
 ipcMain.handle("app-launch", async (_e, launch) => {
-  const exe = await findInstalledExe(launch);
-  if (!exe) return { ok: false, reason: "not-installed" };
-  launchExe(exe);
+  const info = await findInstalledExe(launch);
+  if (!info) return { ok: false, reason: "not-installed" };
+  launchExe(info.exe);
   return { ok: true };
 });
 
@@ -189,9 +219,9 @@ ipcMain.handle("app-install", async (e, launch) => {
     });
 
     // Détecte et lance.
-    const exe = await findInstalledExe(launch);
-    if (exe) {
-      launchExe(exe);
+    const info = await findInstalledExe(launch);
+    if (info) {
+      launchExe(info.exe);
       send("done", { installed: true });
       return { ok: true, installed: true };
     }

@@ -3,6 +3,8 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { AppLauncher } from "@capacitor/app-launcher";
 import { apps } from "./apps.js";
+import AppVersion from "./native/appVersion.js";
+import { compareVersions } from "./version.js";
 
 const VERSION = "0.1.0";
 
@@ -16,9 +18,14 @@ const isAndroid = capPlatform === "android";
 const nativeMode = (app) => !!app.launch && (electronDesktop || isAndroid);
 
 // ── Abstraction installation/lancement multi-plateforme ──────────────
-async function latestAssetUrl(repo, ext) {
+async function latestRelease(repo) {
   const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`);
-  const j = await r.json();
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
+async function latestAssetUrl(repo, ext) {
+  const j = await latestRelease(repo);
   const a = (j.assets || []).find((x) => x.name.toLowerCase().endsWith(ext));
   return a ? a.browser_download_url : null;
 }
@@ -26,15 +33,27 @@ async function latestAssetUrl(repo, ext) {
 async function checkInstalled(app) {
   if (electronDesktop) {
     const r = await window.xyvel.appStatus({ ...app.launch, id: app.id });
-    return !!(r && r.installed);
+    return { installed: !!(r && r.installed), updateAvailable: !!(r && r.updateAvailable) };
   }
   if (isAndroid) {
     try {
       const r = await AppLauncher.canOpenUrl({ url: app.launch.androidPackage });
-      return !!r.value;
-    } catch (e) { return false; }
+      if (!r.value) return { installed: false, updateAvailable: false };
+
+      let updateAvailable = false;
+      try {
+        const v = await AppVersion.getInstalledVersion({ packageName: app.launch.androidPackage });
+        if (v && v.installed && v.versionName && app.launch.releasesRepo) {
+          const rel = await latestRelease(app.launch.releasesRepo);
+          updateAvailable = compareVersions(rel.tag_name, v.versionName) > 0;
+        }
+      } catch (e) {
+        // Plugin natif indisponible (ex: build pas encore synchronisé) -> pas de détection de MAJ.
+      }
+      return { installed: true, updateAvailable };
+    } catch (e) { return { installed: false, updateAvailable: false }; }
   }
-  return false;
+  return { installed: false, updateAvailable: false };
 }
 
 async function launchApp(app) {
@@ -187,7 +206,11 @@ function AppCard({ app }) {
     if (!canLaunch) return;
     let alive = true;
     checkInstalled(app)
-      .then((installed) => alive && setStatus(installed ? "installed" : "not-installed"))
+      .then((r) => {
+        if (!alive) return;
+        if (!r.installed) setStatus("not-installed");
+        else setStatus(r.updateAvailable ? "update-available" : "installed");
+      })
       .catch(() => alive && setStatus("not-installed"));
     return () => { alive = false; };
   }, []);
@@ -249,10 +272,12 @@ function AppCard({ app }) {
         onClick={onClick}
         style={status === "installing" ? { cursor: "default" } : {}}
       >
+        {status === "update-available" && <span className="badge update">Mise à jour</span>}
         <CardHead app={app} accent={accent} />
         <span className="card-cta" style={{ color: accent }}>
           {status === "checking" && <>Vérification…</>}
           {status === "installed" && <>Ouvrir <i className="ti ti-arrow-right" /></>}
+          {status === "update-available" && <><i className="ti ti-download" /> Mettre à jour</>}
           {status === "not-installed" && <><i className="ti ti-download" /> Installer puis ouvrir</>}
           {status === "installing" && <ProgressLabel progress={progress} />}
         </span>
