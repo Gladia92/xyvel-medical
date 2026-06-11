@@ -57,8 +57,13 @@ function findInstalledExe(launch) {
       return resolve(null);
     }
     const name = String(launch.winDisplayName).replace(/'/g, "''");
+    const exeName = String(launch.winExe || "").replace(/'/g, "''");
+    // DisplayName peut contenir la version ("MigraineLog 1.1.0") -> match par préfixe.
+    // InstallLocation est parfois vide -> on récupère l'exe via DisplayIcon.
     const ps = `
 $ErrorActionPreference='SilentlyContinue'
+$wanted='${name}'
+$exeName='${exeName}'
 $roots = @(
   'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
   'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall',
@@ -67,7 +72,12 @@ $roots = @(
 foreach ($r in $roots) {
   Get-ChildItem $r | ForEach-Object {
     $p = Get-ItemProperty $_.PSPath
-    if ($p.DisplayName -eq '${name}') { $p.InstallLocation }
+    if ($p.DisplayName -like "$wanted*") {
+      $exe = $null
+      if ($p.DisplayIcon) { $exe = ($p.DisplayIcon -split ',')[0].Trim('"') }
+      if ((-not $exe) -and $p.InstallLocation) { $exe = Join-Path $p.InstallLocation $exeName }
+      if ($exe -and (Test-Path $exe)) { Write-Output $exe }
+    }
   }
 }`;
     execFile(
@@ -75,12 +85,11 @@ foreach ($r in $roots) {
       ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", ps],
       { windowsHide: true, timeout: 15000 },
       (err, stdout) => {
-        const loc = String(stdout || "")
+        const exe = String(stdout || "")
           .split(/\r?\n/)
           .map((s) => s.trim())
           .filter(Boolean)[0];
-        if (!loc) return resolve(null);
-        const exe = path.join(loc, launch.winExe || "");
+        if (!exe) return resolve(null);
         resolve(fs.existsSync(exe) ? exe : null);
       }
     );

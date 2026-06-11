@@ -29,6 +29,17 @@
         </provider>
     </application>
 
+    <!-- Visibilité des sous-apps (Android 11+) : permet de détecter/lancer ces paquets -->
+    <queries>
+        <package android:name="com.migrainelog.app" />
+        <package android:name="com.xyvel.tensionlog" />
+        <package android:name="com.xyvel.sleeplog" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
