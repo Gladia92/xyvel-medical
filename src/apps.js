@@ -27,6 +27,21 @@ export const apps = [
     url: "https://gladia92.github.io/migrainelog/",
   },
   {
+    id: "suivimed",
+    name: "SuiviMed",
+    description: "Suivi des prises de médicaments et de l'observance (matin/midi/soir).",
+    icon: "ti-pill",
+    color: "#0891b2",
+    appId: "com.xyvel.suivimed",
+    status: "available",
+    launch: {
+      winDisplayName: "SuiviMed",
+      winExe: "SuiviMed.exe",
+      androidPackage: "com.xyvel.suivimed",
+    },
+    url: "",
+  },
+  {
     id: "tension-log",
     name: "TensionLog",
     description: "Suivi de la tension artérielle au quotidien.",
