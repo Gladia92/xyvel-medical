@@ -30,3 +30,6 @@ SIGNING-SECRETS.txt
 .DS_Store
 *.local
 *.log
+
+# Préférences de permission Claude Code (personnel, ne pas committer)
+.claude/settings.local.json

@@ -2,6 +2,12 @@
 // Ajoute une entrée ici chaque fois que tu crées une nouvelle app.
 //   icon   = classe Tabler Icons (https://tabler.io/icons)
 //   status = "available" (lançable) | "soon" (à venir)
+//   launch = comment installer/lancer l'app depuis le hub desktop (Electron) :
+//            winDisplayName = nom affiché dans la liste des programmes (détection registre)
+//            winExe         = exécutable installé
+//            releasesRepo   = dépôt GitHub d'où télécharger l'installeur (.exe)
+//            androidPackage = id de paquet Android (pour lancer/installer sur mobile)
+//   url    = repli web (navigateur), où l'on ne peut pas installer/lancer un programme
 
 export const apps = [
   {
@@ -11,8 +17,14 @@ export const apps = [
     icon: "ti-brain",
     color: "#7c3aed",
     appId: "com.migrainelog.app",
-    url: "https://gladia92.github.io/migrainelog/",
     status: "available",
+    launch: {
+      winDisplayName: "MigraineLog",
+      winExe: "MigraineLog.exe",
+      releasesRepo: "Gladia92/migrainelog",
+      androidPackage: "com.migrainelog.app",
+    },
+    url: "https://gladia92.github.io/migrainelog/",
   },
   {
     id: "tension-log",
