@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { AppLauncher } from "@capacitor/app-launcher";
 import { apps } from "./apps.js";
 
@@ -53,6 +54,34 @@ async function installApp(app) {
 
 export default function App() {
   const [query, setQuery] = useState("");
+  const [backToast, setBackToast] = useState(false);
+
+  // ── Bouton retour Android : revient à l'accueil (efface la recherche),
+  //    puis double appui pour quitter l'application (comme les apps natives).
+  const backHandlerRef = useRef(() => {});
+  const lastBackRef = useRef(0);
+  const toastTimer = useRef(null);
+  backHandlerRef.current = () => {
+    if (query.trim()) { setQuery(""); return; }
+    const now = Date.now();
+    if (now - lastBackRef.current < 2000) {
+      CapacitorApp.exitApp();
+    } else {
+      lastBackRef.current = now;
+      setBackToast(true);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setBackToast(false), 2000);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAndroid) return;
+    let handle;
+    CapacitorApp.addListener("backButton", () => backHandlerRef.current())
+      .then((h) => { handle = h; })
+      .catch(() => {});
+    return () => { if (handle) handle.remove(); };
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -115,6 +144,26 @@ export default function App() {
             ))}
           </div>
         </>
+      )}
+
+      {backToast && (
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: 24,
+            transform: "translateX(-50%)",
+            background: "rgba(20,20,30,0.92)",
+            color: "#fff",
+            padding: "10px 18px",
+            borderRadius: 999,
+            fontSize: 14,
+            zIndex: 1000,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+          }}
+        >
+          Appuyez de nouveau sur Retour pour quitter
+        </div>
       )}
 
       <footer>
