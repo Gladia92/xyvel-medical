@@ -4,7 +4,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { AppLauncher } from "@capacitor/app-launcher";
 import { apps } from "./apps.js";
 import AppVersion from "./native/appVersion.js";
-import { compareVersions } from "./version.js";
+import { buildNumber, isUpdateAvailable } from "./version.js";
 
 const VERSION = "0.1.0";
 
@@ -45,7 +45,10 @@ async function checkInstalled(app) {
         const v = await AppVersion.getInstalledVersion({ packageName: app.launch.androidPackage });
         if (v && v.installed && v.versionName && app.launch.releasesRepo) {
           const rel = await latestRelease(app.launch.releasesRepo);
-          updateAvailable = compareVersions(rel.tag_name, v.versionName) > 0;
+          updateAvailable = isUpdateAvailable(
+            rel.tag_name, buildNumber(rel.tag_name),
+            v.versionName, v.versionCode
+          );
         }
       } catch (e) {
         // Plugin natif indisponible (ex: build pas encore synchronisé) -> pas de détection de MAJ.

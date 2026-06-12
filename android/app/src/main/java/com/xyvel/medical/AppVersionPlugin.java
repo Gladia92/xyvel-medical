@@ -28,6 +28,9 @@ public class AppVersionPlugin extends Plugin {
             PackageInfo info = pm.getPackageInfo(packageName, 0);
             ret.put("installed", true);
             ret.put("versionName", info.versionName);
+            // Champ déprécié (API 28+: getLongVersionCode()) mais toujours rempli
+            // pour compat, et nos versionCode (run_number CI) restent petits.
+            ret.put("versionCode", info.versionCode);
         } catch (PackageManager.NameNotFoundException e) {
             ret.put("installed", false);
         }

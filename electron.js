@@ -101,7 +101,9 @@ foreach ($r in $roots) {
 // Compare deux numéros de version "x.y.z" (ignore un préfixe "v").
 // Retourne > 0 si a > b, < 0 si a < b, 0 si égales.
 function normalizeVersion(v) {
-  return String(v || "").trim().replace(/^v/i, "");
+  // Retire le préfixe "v" et les métadonnées semver (-prerelease / +build),
+  // ex: "v0.1.0-build10" et "0.1.0+build.10.2026.06.12.0541" -> "0.1.0".
+  return String(v || "").trim().replace(/^v/i, "").replace(/[-+].*$/, "");
 }
 
 function compareVersions(a, b) {
@@ -112,6 +114,21 @@ function compareVersions(a, b) {
     if (diff !== 0) return diff;
   }
   return 0;
+}
+
+// Numéro de build CI, ex: "v0.1.0-build10" ou "0.1.0+build.10.2026.06.12.0541" -> 10.
+// 0 si absent (versions sans numéro de build, ex: MigraineLog "v1.1.0").
+function buildNumber(v) {
+  const m = String(v || "").match(/build\.?(\d+)/i);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+// Une mise à jour est disponible si la version de base est plus récente, ou si
+// elle est identique mais que le numéro de build CI est plus élevé.
+function isUpdateAvailable(latestVersion, latestBuild, installedVersion, installedBuild) {
+  const baseDiff = compareVersions(latestVersion, installedVersion);
+  if (baseDiff !== 0) return baseDiff > 0;
+  return (latestBuild || 0) > (installedBuild || 0);
 }
 
 function launchExe(exe) {
@@ -178,7 +195,10 @@ ipcMain.handle("app-status", async (_e, launch) => {
     try {
       const rel = await getJSON(`https://api.github.com/repos/${launch.releasesRepo}/releases/latest`);
       result.latestVersion = normalizeVersion(rel.tag_name);
-      result.updateAvailable = compareVersions(result.latestVersion, info.version) > 0;
+      result.updateAvailable = isUpdateAvailable(
+        rel.tag_name, buildNumber(rel.tag_name),
+        info.version, buildNumber(info.version)
+      );
     } catch (e) {
       // Pas de réseau / API indisponible -> on ignore, pas de mise à jour signalée.
     }
