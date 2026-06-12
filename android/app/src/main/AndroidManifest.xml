@@ -32,6 +32,7 @@
     <!-- Visibilité des sous-apps (Android 11+) : permet de détecter/lancer ces paquets -->
     <queries>
         <package android:name="com.migrainelog.app" />
+        <package android:name="com.xyvel.suivimed" />
         <package android:name="com.xyvel.tensionlog" />
         <package android:name="com.xyvel.sleeplog" />
         <intent>
