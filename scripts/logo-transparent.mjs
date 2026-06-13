@@ -37,6 +37,15 @@ while (stack.length) {
   push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1);
 }
 
+// Passe globale : efface les poches de blanc PUR enfermées (gaps de l'entrelacs)
+// que le flood-fill ne peut pas atteindre depuis le bord. Seuil élevé pour
+// épargner le gris argenté (~180) des épées et le vert du serpent.
+for (let p = 0; p < W * H; p++) {
+  const i = p * C;
+  if (data[i + 3] === 0) continue;
+  if (data[i] > 244 && data[i + 1] > 244 && data[i + 2] > 244) data[i + 3] = 0;
+}
+
 // Adoucit le liseré : pixels clairs adjacents à du transparent → alpha partiel.
 for (let y = 0; y < H; y++) {
   for (let x = 0; x < W; x++) {
