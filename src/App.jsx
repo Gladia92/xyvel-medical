@@ -120,16 +120,18 @@ export default function App() {
 
   return (
     <div>
-      <div className="brand">
-        <img className="brand-logo" src="./logo.png" alt="XYVEL Medical" />
-        <span className="brand-name">XYVEL Medical</span>
-      </div>
+      <div className="hero">
+        <div className="logo-wrap">
+          <img className="brand-logo" src="./logo.png" alt="XYVEL Medical" />
+        </div>
+        <div className="brand-name">XYVEL Medical</div>
 
-      <h1>Vos applications santé</h1>
-      <p className="tagline">
-        Suivez vos symptômes au quotidien. Choisissez une application pour
-        commencer.
-      </p>
+        <h1>Vos applications santé</h1>
+        <p className="tagline">
+          Suivez vos symptômes au quotidien. Choisissez une application pour
+          commencer.
+        </p>
+      </div>
 
       <label className="search">
         <i className="ti ti-search" />
@@ -198,8 +200,16 @@ export default function App() {
   );
 }
 
+// Convertit un hex (#rrggbb) en rgba() avec l'alpha donné.
+function hexA(hex, a) {
+  const h = (hex || "#7c3aed").replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
 function AppCard({ app }) {
   const accent = app.color || "#7c3aed";
+  const accentVars = { "--accent": accent, "--glow": hexA(accent, 0.28) };
   const canLaunch = nativeMode(app);
   const [status, setStatus] = useState(canLaunch ? "checking" : "web");
   const [progress, setProgress] = useState(null); // { phase, pct, message }
@@ -258,7 +268,7 @@ function AppCard({ app }) {
   // ─ Carte « à venir »
   if (app.status !== "available") {
     return (
-      <div className="card soon">
+      <div className="card soon" style={accentVars}>
         <span className="badge soon">Bientôt</span>
         <CardHead app={app} accent={accent} />
       </div>
@@ -273,7 +283,7 @@ function AppCard({ app }) {
       <div
         className="card available"
         onClick={onClick}
-        style={status === "installing" ? { cursor: "default" } : {}}
+        style={status === "installing" ? { ...accentVars, cursor: "default" } : accentVars}
       >
         {status === "update-available" && <span className="badge update">Mise à jour</span>}
         <CardHead app={app} accent={accent} />
@@ -299,7 +309,7 @@ function AppCard({ app }) {
 
   // ─ Web (navigateur) : repli sur le lien
   return (
-    <a className="card available" href={app.url || "#"} target="_blank" rel="noreferrer"
+    <a className="card available" href={app.url || "#"} target="_blank" rel="noreferrer" style={accentVars}
        onClick={(e) => { if (!app.url) { e.preventDefault(); alert(`"${app.name}" n'a pas encore de lien.`); } }}>
       <CardHead app={app} accent={accent} />
       <span className="card-cta" style={{ color: accent }}>
@@ -312,7 +322,7 @@ function AppCard({ app }) {
 function CardHead({ app, accent }) {
   return (
     <>
-      <div className="card-icon" style={{ background: accent + "1a", color: accent }}>
+      <div className="card-icon" style={{ background: `linear-gradient(135deg, ${hexA(accent, 0.18)}, ${hexA(accent, 0.08)})`, color: accent }}>
         <i className={`ti ${app.icon || "ti-app-window"}`} />
       </div>
       <div className="card-name">{app.name}</div>
