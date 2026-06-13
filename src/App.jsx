@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { AppLauncher } from "@capacitor/app-launcher";
@@ -105,6 +105,53 @@ export default function App() {
     return () => { if (handle) handle.remove(); };
   }, []);
 
+  // ── Rafraîchissement : re-vérifie l'état (installé / à jour) de chaque carte.
+  //    Déclenché au retour dans le hub (resume Android / focus desktop) — par ex.
+  //    après l'installation d'un APK par le système — et par le pull-to-refresh.
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [pull, setPull] = useState(0);          // distance de tirage (px)
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStart = useRef(null);
+  const refreshTimer = useRef(null);
+
+  const doRefresh = useCallback(() => {
+    setRefreshing(true);
+    setRefreshNonce((n) => n + 1);
+    clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => setRefreshing(false), 1100);
+  }, []);
+
+  useEffect(() => {
+    if (isAndroid) {
+      let h;
+      CapacitorApp.addListener("appStateChange", ({ isActive }) => { if (isActive) doRefresh(); })
+        .then((x) => { h = x; })
+        .catch(() => {});
+      return () => { if (h) h.remove(); };
+    }
+    if (electronDesktop) {
+      const onFocus = () => doRefresh();
+      window.addEventListener("focus", onFocus);
+      return () => window.removeEventListener("focus", onFocus);
+    }
+  }, [doRefresh]);
+
+  // Pull-to-refresh : glisser vers le bas quand on est tout en haut de la page.
+  const onTouchStart = (e) => {
+    pullStart.current = window.scrollY <= 0 && !refreshing ? e.touches[0].clientY : null;
+  };
+  const onTouchMove = (e) => {
+    if (pullStart.current == null) return;
+    const dy = e.touches[0].clientY - pullStart.current;
+    if (dy > 0 && window.scrollY <= 0) setPull(Math.min(dy * 0.45, 90));
+    else setPull(0);
+  };
+  const onTouchEnd = () => {
+    if (pull > 60) doRefresh();
+    setPull(0);
+    pullStart.current = null;
+  };
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return apps;
@@ -119,7 +166,18 @@ export default function App() {
   const soon = filtered.filter((a) => a.status === "soon");
 
   return (
-    <div>
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+      <div
+        className="ptr"
+        style={{
+          height: refreshing ? 46 : pull,
+          opacity: refreshing || pull > 4 ? 1 : 0,
+        }}
+      >
+        <i className={`ti ti-refresh ${refreshing ? "spin" : ""}`}
+           style={refreshing ? undefined : { transform: `rotate(${pull * 3}deg)` }} />
+      </div>
+
       <div className="hero">
         <div className="logo-wrap">
           <img className="brand-logo" src="./logo.png" alt="XYVEL Medical" />
@@ -153,7 +211,7 @@ export default function App() {
           <div className="section-label">Disponibles</div>
           <div className="grid">
             {available.map((app) => (
-              <AppCard key={app.id} app={app} />
+              <AppCard key={app.id} app={app} refreshNonce={refreshNonce} />
             ))}
           </div>
         </>
@@ -207,26 +265,30 @@ function hexA(hex, a) {
   return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 
-function AppCard({ app }) {
+function AppCard({ app, refreshNonce }) {
   const accent = app.color || "#7c3aed";
   const accentVars = { "--accent": accent, "--glow": hexA(accent, 0.28) };
   const canLaunch = nativeMode(app);
   const [status, setStatus] = useState(canLaunch ? "checking" : "web");
   const [progress, setProgress] = useState(null); // { phase, pct, message }
+  const installingRef = useRef(false);
 
-  // Vérifie l'installation au montage (desktop / Android).
+  // Vérifie l'installation au montage ET à chaque rafraîchissement (resume /
+  // focus / pull-to-refresh) -> remet la carte dans le bon état après une
+  // installation ou mise à jour faite hors de l'app (système Android).
   useEffect(() => {
-    if (!canLaunch) return;
+    if (!canLaunch || installingRef.current) return;
     let alive = true;
     checkInstalled(app)
       .then((r) => {
         if (!alive) return;
+        setProgress(null);
         if (!r.installed) setStatus("not-installed");
         else setStatus(r.updateAvailable ? "update-available" : "installed");
       })
       .catch(() => alive && setStatus("not-installed"));
     return () => { alive = false; };
-  }, []);
+  }, [refreshNonce]);
 
   // Progression d'installation desktop (Electron).
   useEffect(() => {
@@ -252,16 +314,21 @@ function AppCard({ app }) {
   };
 
   const onInstall = async () => {
+    const wasInstalled = status === "installed" || status === "update-available";
+    installingRef.current = true;
     setStatus("installing");
     setProgress({ phase: "lookup" });
     const r = await installApp(app);
+    installingRef.current = false;
     if (r && r.androidDownload) {
-      // Android : pas de callback système -> on informe.
-      setStatus("not-installed");
-      setProgress({ phase: "android-hint" });
+      // Android : le système télécharge puis installe l'APK hors de l'app. On
+      // garde l'état connu et on informe ; au retour dans le hub, le re-check
+      // (resume) ajustera automatiquement « Ouvrir » / « Mettre à jour ».
+      setStatus(wasInstalled ? "installed" : "not-installed");
+      setProgress({ phase: "android-hint", update: wasInstalled });
     } else if (r && r.ok === false) {
       setProgress({ phase: "error", message: r.error });
-      setStatus("not-installed");
+      setStatus(wasInstalled ? "update-available" : "not-installed");
     }
   };
 
@@ -301,7 +368,11 @@ function AppCard({ app }) {
           <span className="err">Échec : {progress.message}</span>
         )}
         {progress && progress.phase === "android-hint" && (
-          <span className="hint">Téléchargement de l'APK… installe-le, puis rouvre cette carte pour lancer l'app.</span>
+          <span className="hint">
+            {progress.update
+              ? "Téléchargement de la mise à jour… installe-la, puis reviens dans le hub (l'état se met à jour tout seul)."
+              : "Téléchargement de l'APK… installe-le, puis reviens dans le hub pour lancer l'app."}
+          </span>
         )}
       </div>
     );
